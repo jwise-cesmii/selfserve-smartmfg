@@ -5,6 +5,7 @@ import iotc
 from iotc import IOTConnectType, IOTLogLevel
 import smbus2
 import bme280
+from gpiozero import LED
 from binascii import unhexlify
 from random import randint
 from time import sleep
@@ -19,7 +20,10 @@ config.read(configFile)
 print ("Loading configuration from ...")
 print (configFile)
 sampleInterval=int(config.get("Settings", "sampleInterval"))
+ledPin=int(config.get("Settings", "LEDPin"))
+led = LED(ledPin)
 print ("Sample interval: " + str(sampleInterval))
+print ("LED Pin: " + str(ledPin))
 
 #bme sensor config
 port=int(config.get("Sensors", "BMEPort"))
@@ -74,6 +78,7 @@ iotc.connect()
 while iotc.isConnected():
   iotc.doNext() # do the async work needed to be done for MQTT
   if gCanSend == True:
+      led.on()
       sensordata = bme280.sample(bus, hexaddress, calibration_params)
       print("Sending telemetry..")
       iotc.sendTelemetry("{ \
@@ -86,5 +91,5 @@ while iotc.isConnected():
 \"gyroscopeZ\": " + str(randint(10, 90)) + ", \
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
-
       sleep(sampleInterval)
+      led.off()
