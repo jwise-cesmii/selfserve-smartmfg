@@ -3,21 +3,40 @@
 
 import iotc
 from iotc import IOTConnectType, IOTLogLevel
+import smbus2
+import bme280
+from binascii import unhexlify
 from random import randint
+from time import sleep
 import os.path
 import configparser
 
+#load config
 homeDir = os.path.expanduser("~")
 configFile = os.path.join(homeDir, "iotc.config")
 config = configparser.ConfigParser()
 config.read(configFile)
-
 print ("Loading configuration from ...")
 print (configFile)
+sampleInterval=int(config.get("Settings", "sampleInterval"))
+print ("Sample interval: " + str(sampleInterval))
+
+#bme sensor config
+port=int(config.get("Sensors", "BMEPort"))
+address=config.get("Sensors", "BMEAddress")
+hexaddress = int(address, 16)
+print ("Using Sensor values ...")
+print ("BMEPort: " + str(port))
+print ("BMEAddress: '" + hex(hexaddress) + "'")
+
+bus = smbus2.SMBus(port)
+calibration_params = bme280.load_calibration_params(bus, hexaddress)
+
+#azure config
 deviceId = str(config.get("AzureKeys", "deviceId"))
 scopeId = str(config.get("AzureKeys", "scopeId"))
 deviceKey = str(config.get("AzureKeys", "deviceKey"))
-print ("Using values ...")
+print ("Using Azure values ...")
 print ("deviceId: " + deviceId)
 print ("scopeId: " + scopeId)
 print ("deviceKey: " + deviceKey)
@@ -51,21 +70,21 @@ iotc.on("SettingsUpdated", onsettingsupdated)
 
 iotc.connect()
 
+#update loop
 while iotc.isConnected():
   iotc.doNext() # do the async work needed to be done for MQTT
   if gCanSend == True:
-    if gCounter % 20 == 0:
-      gCounter = 0
+      sensordata = bme280.sample(bus, hexaddress, calibration_params)
       print("Sending telemetry..")
       iotc.sendTelemetry("{ \
-\"temp\": " + str(randint(20, 45)) + ", \
+\"temp\": " + str(sensordata.temperature) + ", \
 \"accelerometerX\": " + str(randint(2, 95)) + ", \
 \"accelerometerY\": " + str(randint(3, 69)) + ", \
-\"accelerometerZ\": " + str(randint(3, 69)) + ", \
-\"gyroscopeX\": " + str(randint(3, 69)) + ", \
-\"gyroscopeY\": " + str(randint(3, 69)) + ", \
-\"gyroscopeZ\": " + str(randint(3, 69)) + ", \
-\"humidity\": " + str(randint(3, 69)) + ", \
-\"accelerometerZ\": " + str(randint(1, 44)) + "}")
+\"accelerometerZ\": " + str(randint(3, 75)) + ", \
+\"gyroscopeX\": " + str(randint(3, 32)) + ", \
+\"gyroscopeY\": " + str(randint(32, 80)) + ", \
+\"gyroscopeZ\": " + str(randint(10, 90)) + ", \
+\"humidity\": " + str(sensordata.humidity) + ", \
+\"pressure\": " + str(sensordata.pressure) + "}")
 
-    gCounter += 2
+      sleep(sampleInterval)
