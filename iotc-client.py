@@ -5,10 +5,12 @@ import iotc
 from iotc import IOTConnectType, IOTLogLevel
 import smbus2
 import bme280
-from gpiozero import LED
+import psutil
+from gpiozero import LED, CPUTemperature
 from binascii import unhexlify
 from random import randint
 from time import sleep
+from datetime import datetime
 import os.path
 import configparser
 
@@ -22,8 +24,10 @@ print (configFile)
 sampleInterval=int(config.get("Settings", "sampleInterval"))
 ledPin=int(config.get("Settings", "LEDPin"))
 led = LED(ledPin)
+cpu = CPUTemperature()
 print ("Sample interval: " + str(sampleInterval))
 print ("LED Pin: " + str(ledPin))
+
 
 #bme sensor config
 port=int(config.get("Sensors", "BMEPort"))
@@ -80,15 +84,12 @@ while iotc.isConnected():
   if gCanSend == True:
       led.on()
       sensordata = bme280.sample(bus, hexaddress, calibration_params)
-      print("Sending telemetry..")
+      print("[" + str(datetime.now()) + "] Sending telemetry...")
       iotc.sendTelemetry("{ \
-\"temp\": " + str(sensordata.temperature) + ", \
-\"accelerometerX\": " + str(randint(2, 95)) + ", \
-\"accelerometerY\": " + str(randint(3, 69)) + ", \
-\"accelerometerZ\": " + str(randint(3, 75)) + ", \
-\"gyroscopeX\": " + str(randint(3, 32)) + ", \
-\"gyroscopeY\": " + str(randint(32, 80)) + ", \
-\"gyroscopeZ\": " + str(randint(10, 90)) + ", \
+\"ambientTemp\": " + str(sensordata.temperature) + ", \
+\"cpuTemp\": " + str(cpu.temperature) + ", \
+\"cpuLoad\": " + str(psutil.cpu_percent()) + ", \
+\"randomNum\": " + str(randint(1, 99)) + ", \
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
       sleep(sampleInterval)

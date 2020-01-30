@@ -8,6 +8,8 @@ sudo pip3 install graphql_client
 
 sudo pip3 install gpiozero
 
+sudo pip install psutil
+
 sudo apt-get install i2c-tools
 
 Install BME2380 Sensor, check with i2cdetect -y 1
