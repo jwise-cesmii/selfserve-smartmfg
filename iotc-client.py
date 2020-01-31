@@ -5,11 +5,11 @@
 
 import iotc
 from iotc import IOTConnectType, IOTLogLevel
+import location-lib
+import network-lib
 import smbus2
 import bme280
 import psutil
-import requests
-import json
 import os.path
 import configparser
 from gpiozero import LED, CPUTemperature
@@ -69,16 +69,6 @@ iotc.setLogLevel(IOTLogLevel.IOTC_LOGGING_API_ONLY)
 gCanSend = False
 gCounter = 0
 
-def getlocationLonLat():
-  locationdata = requests.get('https://api.ipgeolocation.io/ipgeo?apiKey=c5eb1350abec4b518a808dba26c766f5').text
-  jsondata = json.loads(locationdata)
-  return "{ \"lon\":\"" + jsondata['longitude'] + "\", \"lat\":\"" + jsondata['latitude'] + "\"}";  #{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }
-
-def getlocationCity():
-  locationdata = requests.get('https://api.ipgeolocation.io/ipgeo?apiKey=c5eb1350abec4b518a808dba26c766f5').text
-  jsondata = json.loads(locationdata)
-  return jsondata['city'] + ", " + jsondata['state_prov']
-
 def onconnect(info):
   global gCanSend
   print("- [onconnect] => status:" + str(info.getStatusCode()))
@@ -95,9 +85,12 @@ def oncommand(info):  # handle commands sent from Azure
     ledCommand.toggle()
   if info.getTag() == "updateLocation":
     global currLocation
-    currLocation = getlocationLonLat()
-    iotc.sendProperty('{"currCity":"' + getlocationCity() + '"}')
-    iotc.sendTelemetry("{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }")
+    currLocation = location-lib.getlocationLonLat()
+    iotc.sendProperty('{"currCity":"' + location-lib.getlocationCity() + '"}')
+    iotc.sendTelemetry(currLocation)
+  if info.getTag() == "scanNetwork":
+    networkCount = network-lib.getNetDeviceCount()
+    iotc.sendProperty('{"netDeviceCount":"' + networkCount + '"}')
 
 def onsettingsupdated(info):  # handle settings set by Azure
   global useStatusLight
