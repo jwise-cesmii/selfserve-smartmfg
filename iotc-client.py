@@ -1,4 +1,6 @@
+# Based on https://github.com/Azure/iot-central-firmware
 # Copyright (c) Microsoft. All rights reserved.
+# Extensions and improvements by Jon W, 2020
 # Licensed under the MIT license.
 
 import iotc
@@ -6,41 +8,53 @@ from iotc import IOTConnectType, IOTLogLevel
 import smbus2
 import bme280
 import psutil
+import requests
+import json
+import os.path
+import configparser
 from gpiozero import LED, CPUTemperature
 from binascii import unhexlify
 from random import randint
 from time import sleep
 from datetime import datetime
-import os.path
-import configparser
 
-#load config
-homeDir = os.path.expanduser("~")
-configFile = os.path.join(homeDir, "iotc.config")
+print ("")
+print ("Azure IOT Central Client")
+print ("========================")
+print ("")
+
+#load local config
+configFile = os.path.join(os.path.expanduser("~"), "iotc.config") 
 config = configparser.ConfigParser()
 config.read(configFile)
-print ("Loading configuration from ...")
-print (configFile)
+print ("Loading configuration from " + configFile + " ...")
 sampleInterval=int(config.get("Settings", "sampleInterval"))
-ledPin=int(config.get("Settings", "LEDPin"))
-led = LED(ledPin)
+statusLEDPin=int(config.get("Settings", "statusLEDPin"))
+commandLEDPin=int(config.get("Settings", "commandLEDPin"))
+global currLocation
+currLocation=str(config.get("Settings", "defaultLocation"))   #{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }
+ledStatus = LED(statusLEDPin)
+global useStatusLight
+useStatusLight = True
+ledCommand = LED(commandLEDPin)
 cpu = CPUTemperature()
 print ("Sample interval: " + str(sampleInterval))
-print ("LED Pin: " + str(ledPin))
+print ("Status LED Pin: " + str(statusLEDPin))
+print ("Command LED Pin: " + str(commandLEDPin))
+print ("")
 
-
-#bme sensor config
+#BME sensor config
 port=int(config.get("Sensors", "BMEPort"))
 address=config.get("Sensors", "BMEAddress")
 hexaddress = int(address, 16)
 print ("Using Sensor values ...")
 print ("BMEPort: " + str(port))
 print ("BMEAddress: '" + hex(hexaddress) + "'")
-
+print("")
 bus = smbus2.SMBus(port)
 calibration_params = bme280.load_calibration_params(bus, hexaddress)
 
-#azure config
+#Azure settings
 deviceId = str(config.get("AzureKeys", "deviceId"))
 scopeId = str(config.get("AzureKeys", "scopeId"))
 deviceKey = str(config.get("AzureKeys", "deviceKey"))
@@ -48,41 +62,65 @@ print ("Using Azure values ...")
 print ("deviceId: " + deviceId)
 print ("scopeId: " + scopeId)
 print ("deviceKey: " + deviceKey)
-
+print("")
 iotc = iotc.Device(scopeId, deviceKey, deviceId, IOTConnectType.IOTC_CONNECT_SYMM_KEY)
 iotc.setLogLevel(IOTLogLevel.IOTC_LOGGING_API_ONLY)
 
 gCanSend = False
 gCounter = 0
 
+def getlocationLonLat():
+  locationdata = requests.get('https://api.ipgeolocation.io/ipgeo?apiKey=c5eb1350abec4b518a808dba26c766f5').text
+  jsondata = json.loads(locationdata)
+  return "{ \"lon\":\"" + jsondata['longitude'] + "\", \"lat\":\"" + jsondata['latitude'] + "\"}";  #{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }
+
+def getlocationCity():
+  locationdata = requests.get('https://api.ipgeolocation.io/ipgeo?apiKey=c5eb1350abec4b518a808dba26c766f5').text
+  jsondata = json.loads(locationdata)
+  return jsondata['city'] + ", " + jsondata['state_prov']
+
 def onconnect(info):
   global gCanSend
   print("- [onconnect] => status:" + str(info.getStatusCode()))
   if info.getStatusCode() == 0:
-     if iotc.isConnected():
-       gCanSend = True
+    if iotc.isConnected():
+      gCanSend = True
 
 def onmessagesent(info):
   print("\t- [onmessagesent] => " + str(info.getPayload()))
 
-def oncommand(info):
+def oncommand(info):  # handle commands sent from Azure
   print("- [oncommand] => " + info.getTag() + " => " + str(info.getPayload()))
+  if info.getTag() == "toggleLED": 
+    ledCommand.toggle()
+  if info.getTag() == "updateLocation":
+    global currLocation
+    currLocation = getlocationLonLat()
+    iotc.sendProperty('{"currCity":"' + getlocationCity() + '"}')
+    iotc.sendTelemetry("{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }")
 
-def onsettingsupdated(info):
+def onsettingsupdated(info):  # handle settings set by Azure
+  global useStatusLight
   print("- [onsettingsupdated] => " + info.getTag() + " => " + info.getPayload())
+  if info.getTag() == "useStatusLight":
+      if 'true' in info.getPayload():
+        useStatusLight = True
+      else:
+        useStatusLight = False
 
 iotc.on("ConnectionStatus", onconnect)
 iotc.on("MessageSent", onmessagesent)
 iotc.on("Command", oncommand)
 iotc.on("SettingsUpdated", onsettingsupdated)
-
 iotc.connect()
+iotc.sendProperty('{"runNumber":' + str(randint(1,10000)) + '}')
 
 #update loop
 while iotc.isConnected():
   iotc.doNext() # do the async work needed to be done for MQTT
   if gCanSend == True:
-      led.on()
+      if useStatusLight == True:
+        ledStatus.on()
       sensordata = bme280.sample(bus, hexaddress, calibration_params)
       print("[" + str(datetime.now()) + "] Sending telemetry...")
       iotc.sendTelemetry("{ \
@@ -93,4 +131,4 @@ while iotc.isConnected():
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
       sleep(sampleInterval)
-      led.off()
+      ledStatus.off()
