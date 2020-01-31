@@ -4,6 +4,16 @@ enable I2C and SPI interfaces in raspi-config
 
 sudo apt install python3-pip
 
+sudo apt install nmap
+
+sudo pip install nmap
+
+sudo pip install python-nmap
+
+sudo pip3 install nmap
+
+sudo pip3 install python-nmap
+
 sudo pip3 install graphql_client
 
 sudo pip3 install gpiozero
