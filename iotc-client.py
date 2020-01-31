@@ -5,8 +5,8 @@
 
 import iotc
 from iotc import IOTConnectType, IOTLogLevel
-import location-lib
-import network-lib
+import locationlib
+import networklib
 import smbus2
 import bme280
 import psutil
@@ -85,11 +85,11 @@ def oncommand(info):  # handle commands sent from Azure
     ledCommand.toggle()
   if info.getTag() == "updateLocation":
     global currLocation
-    currLocation = location-lib.getlocationLonLat()
-    iotc.sendProperty('{"currCity":"' + location-lib.getlocationCity() + '"}')
+    currLocation = locationlib.getlocationLonLat()
+    iotc.sendProperty('{"currCity":"' + locationlib.getlocationCity() + '"}')
     iotc.sendTelemetry(currLocation)
   if info.getTag() == "scanNetwork":
-    networkCount = network-lib.getNetDeviceCount()
+    networkCount = networklib.getNetDeviceCount()
     iotc.sendProperty('{"netDeviceCount":"' + networkCount + '"}')
 
 def onsettingsupdated(info):  # handle settings set by Azure
