@@ -24,6 +24,7 @@ print ("========================")
 print ("")
 
 #load local config
+picFile = os.path.join(os.path.expanduser("~"), "picam.jpg")
 configFile = os.path.join(os.path.expanduser("~"), "iotc.config") 
 config = configparser.ConfigParser()
 config.read(configFile)
@@ -109,19 +110,24 @@ iotc.connect()
 iotc.sendProperty('{"runNumber":' + str(randint(1,10000)) + '}')
 
 #update loop
-while iotc.isConnected():
-  iotc.doNext() # do the async work needed to be done for MQTT
-  if gCanSend == True:
-      if useStatusLight == True:
-        ledStatus.on()
-      sensordata = bme280.sample(bus, hexaddress, calibration_params)
-      print("[" + str(datetime.now()) + "] Sending telemetry...")
-      iotc.sendTelemetry("{ \
+def sendTelemetry():
+  while iotc.isConnected():
+    iotc.doNext() # do the async work needed to be done for MQTT
+    if gCanSend == True:
+        if useStatusLight == True:
+          ledStatus.on()
+        sensordata = bme280.sample(bus, hexaddress, calibration_params)
+        print("[" + str(datetime.now()) + "] Sending telemetry...")
+        iotc.sendTelemetry("{ \
 \"ambientTemp\": " + str(sensordata.temperature) + ", \
 \"cpuTemp\": " + str(cpu.temperature) + ", \
 \"cpuLoad\": " + str(psutil.cpu_percent()) + ", \
 \"randomNum\": " + str(randint(1, 99)) + ", \
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
-      sleep(sampleInterval)
-      ledStatus.off()
+        global picFile
+        os.system("raspistill -o " + picFile)
+        ledStatus.off()
+        sleep(sampleInterval)
+
+sendTelemetry()
