@@ -76,6 +76,7 @@ def onconnect(info):
   if info.getStatusCode() == 0:
     if iotc.isConnected():
       gCanSend = True
+      updateLocation()
 
 def onmessagesent(info):
   print("\t- [onmessagesent] => " + str(info.getPayload()))
@@ -85,10 +86,7 @@ def oncommand(info):  # handle commands sent from Azure
   if info.getTag() == "toggleLED": 
     ledCommand.toggle()
   if info.getTag() == "updateLocation":
-    global currLocation
-    currLocation = locationlib.getlocationLonLat()
-    iotc.sendProperty('{"currCity":"' + locationlib.getlocationCity() + '"}')
-    iotc.sendTelemetry(currLocation)
+    updateLocation()
   if info.getTag() == "scanNetwork":
     networkCount = networklib.getNetDeviceCount()
     iotc.sendProperty('{"netDeviceCount":"' + networkCount + '"}')
@@ -102,12 +100,11 @@ def onsettingsupdated(info):  # handle settings set by Azure
       else:
         useStatusLight = False
 
-iotc.on("ConnectionStatus", onconnect)
-iotc.on("MessageSent", onmessagesent)
-iotc.on("Command", oncommand)
-iotc.on("SettingsUpdated", onsettingsupdated)
-iotc.connect()
-iotc.sendProperty('{"runNumber":' + str(randint(1,10000)) + '}')
+def updateLocation():
+    global currLocation
+    currLocation = locationlib.getlocationLonLat()
+    iotc.sendProperty('{"currCity":"' + locationlib.getlocationCity() + '"}')
+    iotc.sendTelemetry('{"currLocation":' + currLocation + '}')
 
 #update loop
 def sendTelemetry():
@@ -126,8 +123,17 @@ def sendTelemetry():
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
         global picFile
-        os.system("raspistill -o " + picFile)
+        #os.system("raspistill -w 640 -h 480 -o " + picFile)
         ledStatus.off()
         sleep(sampleInterval)
 
-sendTelemetry()
+iotc.on("Command", oncommand)
+iotc.on("ConnectionStatus", onconnect)
+iotc.on("MessageSent", onmessagesent)
+iotc.on("SettingsUpdated", onsettingsupdated)
+
+while True:
+  iotc.connect()
+  iotc.sendProperty('{"runNumber":' + str(randint(1,10000)) + '}')
+  sendTelemetry()
+  sleep(40)
