@@ -12,7 +12,7 @@ import bme280
 import psutil
 import os.path
 import configparser
-from gpiozero import LED, CPUTemperature
+from gpiozero import LED, CPUTemperature, Button
 from binascii import unhexlify
 from random import randint
 from time import sleep
@@ -32,6 +32,7 @@ print ("Loading configuration from " + configFile + " ...")
 sampleInterval=int(config.get("Settings", "sampleInterval"))
 statusLEDPin=int(config.get("Settings", "statusLEDPin"))
 commandLEDPin=int(config.get("Settings", "commandLEDPin"))
+doorSensorPin=int(config.get("Settings", "doorSensorPin"))
 global currLocation
 currLocation=str(config.get("Settings", "defaultLocation"))   #{\"lon\":\"-81.20288\", \"lat\":\"41.58339\" }
 ledStatus = LED(statusLEDPin)
@@ -39,9 +40,11 @@ global useStatusLight
 useStatusLight = True
 ledCommand = LED(commandLEDPin)
 cpu = CPUTemperature()
+door = Button(doorSensorPin)
 print ("Sample interval: " + str(sampleInterval))
 print ("Status LED Pin: " + str(statusLEDPin))
 print ("Command LED Pin: " + str(commandLEDPin))
+print ("Door Sensor Pin: " + str(doorSensorPin))
 print ("")
 
 #BME sensor config
@@ -114,8 +117,12 @@ def sendTelemetry():
         if useStatusLight == True:
           ledStatus.on()
         sensordata = bme280.sample(bus, hexaddress, calibration_params)
+        doorState = 1
+        if door.is_pressed == True:
+          doorState = 0
         print("[" + str(datetime.now()) + "] Sending telemetry...")
         iotc.sendTelemetry("{ \
+\"doorOpen\": " + str(doorState) + ", \
 \"ambientTemp\": " + str(sensordata.temperature) + ", \
 \"cpuTemp\": " + str(cpu.temperature) + ", \
 \"cpuLoad\": " + str(psutil.cpu_percent()) + ", \
