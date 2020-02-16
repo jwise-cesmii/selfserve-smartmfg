@@ -10,9 +10,11 @@ sudo pip3 install nmap
 
 sudo pip3 install python-nmap
 
-sudo pip3 install graphql_client
+sudo pip3 install psutil
 
 sudo pip3 install gpiozero
+
+sudo pip3 install graphql_client
 
 sudo pip3 install iotc
 
