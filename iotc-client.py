@@ -38,6 +38,8 @@ currLocation=str(config.get("Settings", "defaultLocation"))   #{\"lon\":\"-81.20
 ledStatus = LED(statusLEDPin)
 global useStatusLight
 useStatusLight = True
+
+#GPIO Config
 ledCommand = LED(commandLEDPin)
 cpu = CPUTemperature()
 door = Button(doorSensorPin)
@@ -129,7 +131,7 @@ def sendTelemetry():
 \"randomNum\": " + str(randint(1, 99)) + ", \
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
-        global picFile
+        #global picFile
         #os.system("raspistill -w 640 -h 480 -o " + picFile)
         ledStatus.off()
         sleep(sampleInterval)
