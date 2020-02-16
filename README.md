@@ -12,6 +12,8 @@ sudo pip3 install python-nmap
 
 sudo pip3 install psutil
 
+sudo apt install python3-gpiozero
+
 sudo pip3 install gpiozero
 
 sudo pip3 install graphql_client
