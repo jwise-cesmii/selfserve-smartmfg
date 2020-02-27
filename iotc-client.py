@@ -135,7 +135,7 @@ def sendTelemetry():
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
         #send to ThinkIQ
-        gqlthinkiq.sendFridgeDoorSample("0", "2020-02-27T17:30:00-05:00")
+        gqlthinkiq.sendFridgeDoorSample("0")
         #global picFile
         #os.system("raspistill -w 640 -h 480 -o " + picFile)
         ledStatus.off()
