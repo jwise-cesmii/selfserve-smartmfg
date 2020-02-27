@@ -7,6 +7,7 @@ import iotc
 from iotc import IOTConnectType, IOTLogLevel
 import locationlib
 import networklib
+import gqlthinkiq
 import smbus2
 import bme280
 import psutil
@@ -22,7 +23,7 @@ print ("")
 print ("Azure IOT Central Client")
 print ("========================")
 print ("")
-sleep(40)
+#sleep(40)
 
 #load local config
 picFile = os.path.join(os.path.expanduser("~"), "picam.jpg")
@@ -124,6 +125,7 @@ def sendTelemetry():
         if door.is_pressed == True:
           doorState = 0
         print("[" + str(datetime.now()) + "] Sending telemetry...")
+        #send to Azure
         iotc.sendTelemetry("{ \
 \"doorOpen\": " + str(doorState) + ", \
 \"ambientTemp\": " + str(sensordata.temperature) + ", \
@@ -132,6 +134,8 @@ def sendTelemetry():
 \"randomNum\": " + str(randint(1, 99)) + ", \
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
+        #send to ThinkIQ
+        gqlthinkiq.sendFridgeDoorSample("0", "2020-02-27T17:30:00-05:00")
         #global picFile
         #os.system("raspistill -w 640 -h 480 -o " + picFile)
         ledStatus.off()
