@@ -22,6 +22,7 @@ print ("")
 print ("Azure IOT Central Client")
 print ("========================")
 print ("")
+sleep(40)
 
 #load local config
 picFile = os.path.join(os.path.expanduser("~"), "picam.jpg")
