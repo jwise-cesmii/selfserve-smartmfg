@@ -23,7 +23,7 @@ print ("")
 print ("Azure IOT Central Client")
 print ("========================")
 print ("")
-#sleep(40)
+sleep(40)
 
 #load local config
 picFile = os.path.join(os.path.expanduser("~"), "picam.jpg")
@@ -118,13 +118,13 @@ def sendTelemetry():
   while iotc.isConnected():
     iotc.doNext() # do the async work needed to be done for MQTT
     if gCanSend == True:
+        print("[" + str(datetime.now()) + "] Sending telemetry...")
         if useStatusLight == True:
           ledStatus.on()
         sensordata = bme280.sample(bus, hexaddress, calibration_params)
         doorState = 1
         if door.is_pressed == True:
           doorState = 0
-        print("[" + str(datetime.now()) + "] Sending telemetry...")
         #send to Azure
         iotc.sendTelemetry("{ \
 \"doorOpen\": " + str(doorState) + ", \
@@ -135,7 +135,9 @@ def sendTelemetry():
 \"humidity\": " + str(sensordata.humidity) + ", \
 \"pressure\": " + str(sensordata.pressure) + "}")
         #send to ThinkIQ
-        gqlthinkiq.sendFridgeDoorSample("0")
+        gqlthinkiq.sendFridgeDoorSample(str(doorState))
+        gqlthinkiq.sendFridgeHumiditySample(str(sensordata.humidity))
+        gqlthinkiq.sendFridgeTemperatureSample(str(sensordata.temperature))
         #global picFile
         #os.system("raspistill -w 640 -h 480 -o " + picFile)
         ledStatus.off()

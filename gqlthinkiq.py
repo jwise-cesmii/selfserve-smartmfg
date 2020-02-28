@@ -1,12 +1,18 @@
 from graphql_client import GraphQLClient
 from time import gmtime, strftime
+import os.path
+import configparser
 
-client = GraphQLClient('https://gql.annualmeeting.cesmii.thinkiq.net/graphql')
+configFile = os.path.join(os.path.expanduser("~"), "iotc.config")
+config = configparser.ConfigParser()
+config.read(configFile)
+endpointURL = str(config.get("GraphQL", "endpointURL"))
+client = GraphQLClient(endpointURL)
 
-def makeutcdatetime()
+def makeutcdatetime():
   timestamp = strftime("%Y-%m-%dT%H:%M:%S", gmtime())
-  timestamp = timestamp + "-05:00"
-  return timestamp 
+  print ("time is " + timestamp)
+  return timestamp
 
 def sendFridgeDoorSample(value):
   utcdatetime = makeutcdatetime()
@@ -35,7 +41,7 @@ def sendFridgeTemperatureSample(value):
         entries: [
           {value: "''' + value + '''", timestamp: "''' + utcdatetime + '''", status: "0"}
         ],
-        tagId: "1847"
+        tagId: "1848"
       }) {
       string
     }
@@ -44,8 +50,8 @@ def sendFridgeTemperatureSample(value):
   print("ThinkIQ Mutate:")
   print(str(result))
 
-  def sendFridgeHumiditySample(value):
-    utcdatetime = makeutcdatetime()
+def sendFridgeHumiditySample(value):
+  utcdatetime = makeutcdatetime()
   result = client.query('''
   mutation UpdateFridgeData {
     replaceTimeSeriesRange(
@@ -53,7 +59,7 @@ def sendFridgeTemperatureSample(value):
         entries: [
           {value: "''' + value + '''", timestamp: "''' + utcdatetime + '''", status: "0"}
         ],
-        tagId: "1847"
+        tagId: "1832"
       }) {
       string
     }
